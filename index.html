@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1a56db">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LH Conferência">
+  <title>LH Conferência de Cargas</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ════════════════════ HEADER ════════════════════ -->
+  <header id="app-header">
+    <button id="btn-back" aria-label="Voltar">&#8592;</button>
+    <span id="app-title">LH Conferência</span>
+    <span class="header-badge" id="operator-badge"></span>
+  </header>
+
+  <!-- ════════════════════ HOME ════════════════════ -->
+  <section class="screen" id="screen-home">
+    <div class="logo-block">
+      <div class="logo-icon">🚛</div>
+      <h2>LH Transportes</h2>
+      <p>Sistema de Conferência de Cargas</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Identificação do Operador</div>
+      <div class="field-group">
+        <label for="inp-operador">Seu nome</label>
+        <input id="inp-operador" type="text" class="input-field" placeholder="Ex: João Silva" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Selecione o Processo</div>
+      <div class="process-grid">
+        <button class="process-btn" id="btn-proc-coleta">
+          <span class="icon">📦</span>
+          <div>
+            <div class="label">Conferência de Coleta</div>
+            <div class="sub">Registrar coleta de mercadorias</div>
+          </div>
+        </button>
+        <button class="process-btn" id="btn-proc-descarga">
+          <span class="icon">🔽</span>
+          <div>
+            <div class="label">Conferência de Descarga</div>
+            <div class="sub">Conferir volumes descarregados</div>
+          </div>
+        </button>
+        <button class="process-btn" id="btn-proc-carga">
+          <span class="icon">🔼</span>
+          <div>
+            <div class="label">Conferência de Carregamento</div>
+            <div class="sub">Conferir volumes carregados</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════ COLETA SETUP ════════════════════ -->
+  <section class="screen" id="screen-coleta-setup">
+    <div class="card">
+      <div class="card-title">Dados da Coleta</div>
+      <div class="modal-form">
+        <div class="field-group">
+          <label for="inp-cliente">Nome do Cliente</label>
+          <input id="inp-cliente" type="text" class="input-field" placeholder="Ex: Empresa Alfa Ltda" autocomplete="off">
+        </div>
+        <div class="field-group">
+          <label for="inp-placa-coleta">Placa do Veículo</label>
+          <input id="inp-placa-coleta" type="text" class="input-field" placeholder="Ex: ABC1234" autocomplete="off"
+                 style="text-transform:uppercase">
+        </div>
+        <button class="btn btn-primary" id="btn-iniciar-coleta">Iniciar Coleta</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════ COLETA PALLET ════════════════════ -->
+  <section class="screen" id="screen-coleta-pallet">
+    <div class="card">
+      <div class="card-title">Número do Pallet</div>
+      <div class="modal-form">
+        <div class="field-group">
+          <label for="inp-pallet-num">Número do Pallet (0001 – 9999)</label>
+          <input id="inp-pallet-num" type="text" class="input-field" placeholder="Ex: 0001"
+                 inputmode="numeric" maxlength="4" pattern="[0-9]*">
+        </div>
+        <button class="btn btn-primary" id="btn-iniciar-scan-coleta">📷 Iniciar Captura</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Pallets Capturados nesta Sessão</div>
+      <ul class="list-clean" id="pallet-list">
+        <li class="empty">Nenhum pallet finalizado ainda.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ════════════════════ COLETA SCAN ════════════════════ -->
+  <section class="screen scan-screen" id="screen-coleta-scan">
+    <div class="scan-header">
+      <div class="scan-info-text" id="scan-info">—</div>
+      <div class="text-sm">Aponte para a etiqueta do volume</div>
+    </div>
+    <div class="scan-reader-wrapper">
+      <div id="reader-coleta"></div>
+      <div class="scan-counter-badge">
+        Volumes: <span id="scan-count-coleta">0</span>
+      </div>
+    </div>
+    <div class="scan-footer">
+      <button class="btn btn-success" id="btn-finalizar-pallet">✔ Finalizar Pallet</button>
+    </div>
+  </section>
+
+  <!-- ════════════════════ COLETA SUMMARY ════════════════════ -->
+  <section class="screen" id="screen-coleta-summary">
+    <div class="card">
+      <div class="card-title">Resumo do Pallet</div>
+      <div class="summary-stats">
+        <div class="stat-box">
+          <div class="value" id="summary-pallet-num">—</div>
+          <div class="label">Pallet Nº</div>
+        </div>
+        <div class="stat-box">
+          <div class="value" id="summary-count">0</div>
+          <div class="label">Volumes</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">NFs / Pedidos Capturados</div>
+      <ul class="list-clean" id="summary-nf-list"></ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Próximas Ações</div>
+      <div class="options-list">
+        <button class="btn btn-primary"  id="btn-novo-pallet">
+          📦 Opção 1 — Iniciar Novo Pallet
+        </button>
+        <button class="btn btn-amber"    id="btn-enviar-arquivo">
+          📊 Opção 2 — Enviar Arquivo de Conferência
+        </button>
+        <button class="btn btn-success"  id="btn-encerrar-coleta">
+          ✅ Opção 3 — Encerrar Coleta
+        </button>
+        <button class="btn btn-outline"  id="btn-cancelar-coleta">
+          ✕ Opção 4 — Cancelar Captura
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════ DESCARGA TIPO ════════════════════ -->
+  <section class="screen" id="screen-descarga-tipo">
+    <div class="card">
+      <div class="card-title">Tipo de Descarga</div>
+      <p class="text-sm">Selecione qual tipo de descarga será realizada:</p>
+      <div class="tipo-grid" style="margin-top:16px">
+        <button class="tipo-btn" id="btn-tipo-desc-coleta">
+          <span class="icon">📦</span>
+          <span class="label">Descarga de Coleta</span>
+        </button>
+        <button class="tipo-btn" id="btn-tipo-desc-viagem">
+          <span class="icon">🗺️</span>
+          <span class="label">Descarga de Viagem</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════ DESCARGA COLETA SETUP ════════════════════ -->
+  <section class="screen" id="screen-descarga-coleta-setup">
+    <div class="card">
+      <div class="card-title">Descarga de Coleta</div>
+      <p class="text-sm" style="margin-bottom:12px">
+        O sistema irá comparar os volumes descarregados com as coletas registradas para este veículo.
+      </p>
+      <div class="modal-form">
+        <div class="field-group">
+          <label for="inp-placa-desc-coleta">Placa do Veículo</label>
+          <input id="inp-placa-desc-coleta" type="text" class="input-field" placeholder="Ex: ABC1234"
+                 autocomplete="off" style="text-transform:uppercase">
+        </div>
+        <button class="btn btn-primary" id="btn-iniciar-desc-coleta">📷 Iniciar Conferência</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════ DESCARGA VIAGEM SETUP ════════════════════ -->
+  <section class="screen" id="screen-descarga-viagem-setup">
+    <div class="card">
+      <div class="card-title">Descarga de Viagem</div>
+      <p class="text-sm" style="margin-bottom:12px">
+        Volumes de outra cidade serão sinalizados com aviso sonoro duplo.
+      </p>
+      <div class="modal-form">
+        <div class="field-group">
+          <label for="inp-placa-desc-viagem">Placa do Veículo</label>
+          <input id="inp-placa-desc-viagem" type="text" class="input-field" placeholder="Ex: ABC1234"
+                 autocomplete="off" style="text-transform:uppercase">
+        </div>
+        <div class="field-group">
+          <label for="inp-cidade-desc">Cidade de Descarga</label>
+          <input id="inp-cidade-desc" type="text" class="input-field" placeholder="Ex: Campo Grande" autocomplete="off">
+        </div>
+        <button class="btn btn-primary" id="btn-iniciar-desc-viagem">📷 Iniciar Conferência</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════ DESCARGA SCAN ════════════════════ -->
+  <section class="screen scan-screen" id="screen-descarga-scan">
+    <div class="scan-header">
+      <div class="scan-info-text" id="scan-info-desc">—</div>
+      <div class="text-sm">Aponte para a etiqueta do volume</div>
+    </div>
+    <div class="scan-reader-wrapper">
+      <div id="reader-descarga"></div>
+      <div class="scan-counter-badge">
+        Volumes: <span id="scan-count-descarga">0</span>
+      </div>
+    </div>
+    <div class="scan-footer">
+      <button class="btn btn-success" id="btn-encerrar-descarga">✔ Encerrar Descarga</button>
+    </div>
+  </section>
+
+  <!-- ════════════════════ DESCARGA RESULT ════════════════════ -->
+  <section class="screen" id="screen-descarga-result">
+    <div class="card">
+      <div class="card-title">Resultado da Conferência</div>
+      <div id="descarga-result-container">
+        <!-- Gerado dinamicamente por renderDescargaResult() -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════ CARGA SETUP ════════════════════ -->
+  <section class="screen" id="screen-carga-setup">
+    <div class="card">
+      <div class="card-title">Dados do Carregamento</div>
+      <div class="modal-form">
+        <div class="field-group">
+          <label for="inp-placa-carga">Placa do Veículo</label>
+          <input id="inp-placa-carga" type="text" class="input-field" placeholder="Ex: ABC1234"
+                 autocomplete="off" style="text-transform:uppercase">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Cidades de Destino</div>
+      <p class="text-sm" style="margin-bottom:10px">
+        Informe as cidades. Um novo campo aparece automaticamente ao preencher o anterior.
+      </p>
+      <div id="carga-cidades-container"></div>
+      <button class="btn btn-outline btn-sm" id="btn-add-cidade" style="margin-top:4px">+ Adicionar cidade</button>
+    </div>
+
+    <div class="card">
+      <button class="btn btn-primary" id="btn-iniciar-carregamento">📷 Iniciar Carregamento</button>
+    </div>
+  </section>
+
+  <!-- ════════════════════ CARGA SCAN ════════════════════ -->
+  <section class="screen scan-screen" id="screen-carga-scan">
+    <div class="scan-header">
+      <div class="scan-info-text" id="scan-info-carga">—</div>
+      <div class="text-sm">Aponte para a etiqueta do volume</div>
+    </div>
+    <div class="scan-reader-wrapper">
+      <div id="reader-carga"></div>
+      <div class="scan-counter-badge">
+        Volumes: <span id="scan-count-carga">0</span>
+      </div>
+    </div>
+    <div class="scan-footer">
+      <button class="btn btn-success" id="btn-encerrar-carga">✔ Encerrar Carregamento</button>
+    </div>
+  </section>
+
+  <!-- ════════════════════ CARGA RESULT ════════════════════ -->
+  <section class="screen" id="screen-carga-result">
+    <div class="card">
+      <div class="card-title">Resultado do Carregamento</div>
+      <div id="carga-result-container"></div>
+    </div>
+  </section>
+
+</div><!-- /#app -->
+
+<!-- ════════════════════════════════════
+     MODAIS
+════════════════════════════════════ -->
+
+<!-- Modal: Confirmação de Parse -->
+<div class="modal-overlay" id="modal-parse">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title">📷 Etiqueta Lida</h2>
+    <div class="modal-subtitle" id="parse-raw">—</div>
+    <p class="text-sm" style="margin-bottom:10px">Confirme ou preencha os dados abaixo. Campos marcados em vermelho são obrigatórios.</p>
+    <form id="modal-parse-form" class="modal-form" onsubmit="return false">
+      <div class="field-group">
+        <label>Nº da Nota Fiscal (NF)</label>
+        <input id="inp-parse-nf"     type="text" class="input-field" placeholder="Ex: 123456" inputmode="numeric" autocomplete="off">
+      </div>
+      <div class="field-group">
+        <label>Nº do Pedido</label>
+        <input id="inp-parse-pedido" type="text" class="input-field" placeholder="Ex: 78900" inputmode="numeric" autocomplete="off">
+      </div>
+      <div class="field-group">
+        <label>Cidade de Destino <span style="color:var(--red)">*</span></label>
+        <input id="inp-parse-cidade" type="text" class="input-field" placeholder="Ex: Campo Grande" autocomplete="off">
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+        <div class="field-group">
+          <label>Volume Atual <span style="color:var(--red)">*</span></label>
+          <input id="inp-parse-volAtual" type="number" class="input-field" placeholder="Ex: 1" min="1" inputmode="numeric">
+        </div>
+        <div class="field-group">
+          <label>Total de Volumes <span style="color:var(--red)">*</span></label>
+          <input id="inp-parse-volTotal" type="number" class="input-field" placeholder="Ex: 4" min="1" inputmode="numeric">
+        </div>
+      </div>
+      <p class="text-sm" style="color:var(--gray-400)">* NF ou Pedido deve ser informado (pelo menos um).</p>
+    </form>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="btn-parse-confirm" disabled>✔ Confirmar</button>
+      <button class="btn btn-outline" id="btn-parse-cancel">Cancelar leitura</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Senha de Liberação -->
+<div class="modal-overlay" id="modal-password">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title">🔒 Senha de Liberação</h2>
+    <p class="text-sm" style="margin-bottom:12px">
+      Foram encontradas divergências. Informe a senha para liberar a finalização.
+    </p>
+    <div class="field-group">
+      <label for="inp-password">Senha</label>
+      <input id="inp-password" type="password" class="input-field" placeholder="••••••••" autocomplete="off">
+    </div>
+    <p id="password-error" class="error-text" style="display:none; margin-top:4px">Senha incorreta. Tente novamente.</p>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-danger"   id="btn-password-confirm">Confirmar</button>
+      <button class="btn btn-outline"  id="btn-password-cancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Volumes Pendentes -->
+<div class="modal-overlay" id="modal-pending">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title">⚠ Volumes Pendentes</h2>
+    <p class="text-sm" style="margin-bottom:12px">
+      Existem volumes não capturados. Não é possível encerrar com pendências.
+    </p>
+    <ul class="list-clean" id="pending-list"></ul>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-primary" id="btn-pending-back">Voltar para captura</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Confirmação Genérica -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title">Confirmar</h2>
+    <p class="text-sm" id="modal-confirm-msg" style="margin:8px 0 16px"></p>
+    <div class="modal-actions">
+      <button class="btn btn-danger"  id="btn-modal-confirm">Confirmar</button>
+      <button class="btn btn-outline" id="btn-modal-cancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" role="alert" aria-live="polite"></div>
+
+<!-- ════════════════════════════════════
+     SCRIPTS (CDN)
+════════════════════════════════════ -->
+
+<!-- SheetJS — geração de Excel -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<!-- html5-qrcode — leitura de câmera -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<!-- EmailJS -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+<!-- Firebase (Firestore) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- App modules -->
+<script src="js/config.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/parser.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/scanner.js"></script>
+<script src="js/excel.js"></script>
+<script src="js/email.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

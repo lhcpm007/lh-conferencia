@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guia de Configuração — LH Conferência</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 24px 16px; color: #1f2937; line-height: 1.6; }
+  h1 { color: #1a56db; } h2 { color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-top: 32px; }
+  code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 14px; }
+  pre  { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 14px; }
+  .step { background: #eff6ff; border-left: 4px solid #1a56db; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0; }
+  .warn { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0; }
+  a { color: #1a56db; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 8px 12px; border: 1px solid #e5e7eb; text-align: left; }
+  th { background: #f3f4f6; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>🚛 LH Conferência de Cargas — Guia de Configuração</h1>
+<p>Este guia explica como configurar o Firebase (banco de dados) e o EmailJS (envio de e-mail).</p>
+
+<div class="warn">
+  <strong>Importante:</strong> As configurações são feitas no arquivo <code>js/config.js</code>.
+  Após alterar, salve o arquivo e atualize o aplicativo no celular.
+</div>
+
+<!-- ══════════════════════════════════ -->
+<h2>1. Firebase Firestore (banco de dados compartilhado)</h2>
+
+<p>O Firebase permite que todos os celulares acessem os mesmos dados de coletas e carregamentos.</p>
+
+<div class="step"><strong>Passo 1 —</strong> Acesse <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a></div>
+<div class="step"><strong>Passo 2 —</strong> Clique em <strong>Criar projeto</strong> → nomeie como <code>lh-conferencia</code> → desative Google Analytics → Criar</div>
+<div class="step"><strong>Passo 3 —</strong> No menu lateral: <strong>Firestore Database</strong> → Criar banco de dados → Modo de produção → Selecionar localização <code>southamerica-east1</code></div>
+<div class="step"><strong>Passo 4 —</strong> No menu lateral: <strong>Regras do Firestore</strong> → Cole as regras abaixo e clique em Publicar:</div>
+<pre>
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+</pre>
+<div class="step"><strong>Passo 5 —</strong> No menu lateral: ⚙️ Configurações do Projeto → Suas apps → Adicionar app → Ícone Web (&lt;/&gt;)</div>
+<div class="step"><strong>Passo 6 —</strong> Nomeie a app como <code>lh-conferencia-web</code> → Registrar app → Copie o objeto <code>firebaseConfig</code></div>
+<div class="step"><strong>Passo 7 —</strong> Abra o arquivo <code>js/config.js</code> e substitua os valores da seção <code>firebase</code>:</div>
+<pre>
+firebase: {
+  apiKey:            "AIzaSy...",           // ← cole aqui
+  authDomain:        "lh-conferencia.firebaseapp.com",
+  projectId:         "lh-conferencia",
+  storageBucket:     "lh-conferencia.appspot.com",
+  messagingSenderId: "123456789",
+  appId:             "1:123456789:web:abc..."
+},
+</pre>
+
+<!-- ══════════════════════════════════ -->
+<h2>2. EmailJS (envio automático de e-mail)</h2>
+
+<p>O EmailJS envia e-mails diretamente do navegador, sem necessidade de servidor.</p>
+
+<div class="step"><strong>Passo 1 —</strong> Crie uma conta gratuita em <a href="https://www.emailjs.com" target="_blank">emailjs.com</a></div>
+<div class="step"><strong>Passo 2 —</strong> Menu <strong>Email Services</strong> → Add New Service → Gmail → conecte a conta de e-mail</div>
+<div class="step"><strong>Passo 3 —</strong> Menu <strong>Email Templates</strong> → Create New Template. Use o conteúdo abaixo:</div>
+
+<table>
+  <tr><th>Campo</th><th>Valor</th></tr>
+  <tr><td>Subject</td><td><code>LH Conferência — {{tipo}} — {{placa}} — {{data}}</code></td></tr>
+  <tr><td>Body (HTML)</td><td>Ver abaixo</td></tr>
+  <tr><td>To email</td><td><code>{{to_email}}</code></td></tr>
+</table>
+
+<p>Conteúdo do corpo do e-mail (HTML):</p>
+<pre>
+&lt;h2&gt;LH Conferência de Cargas&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;Operador:&lt;/strong&gt; {{operador}}&lt;br&gt;
+&lt;strong&gt;Processo:&lt;/strong&gt; {{tipo}}&lt;br&gt;
+&lt;strong&gt;Placa:&lt;/strong&gt; {{placa}}&lt;br&gt;
+&lt;strong&gt;Data:&lt;/strong&gt; {{data}}&lt;/p&gt;
+&lt;p&gt;A planilha Excel foi gerada e está disponível no dispositivo do operador.&lt;/p&gt;
+</pre>
+
+<div class="step"><strong>Passo 4 —</strong> Salve o template e anote o <strong>Template ID</strong> (ex: <code>template_abc123</code>)</div>
+<div class="step"><strong>Passo 5 —</strong> Menu <strong>Account</strong> → copie a <strong>Public Key</strong></div>
+<div class="step"><strong>Passo 6 —</strong> Abra <code>js/config.js</code> e preencha:</div>
+<pre>
+emailjs: {
+  serviceId:  "service_abc123",   // ← Service ID
+  templateId: "template_abc123",  // ← Template ID
+  publicKey:  "user_XXXXXXXXXXX"  // ← Public Key
+},
+</pre>
+
+<!-- ══════════════════════════════════ -->
+<h2>3. Hospedagem no GitHub Pages</h2>
+
+<div class="step"><strong>Passo 1 —</strong> Crie uma conta em <a href="https://github.com" target="_blank">github.com</a></div>
+<div class="step"><strong>Passo 2 —</strong> Crie um novo repositório: <strong>New repository</strong> → nome <code>lh-conferencia</code> → Public → Create</div>
+<div class="step"><strong>Passo 3 —</strong> Faça upload de todos os arquivos da pasta <code>carga-conferencia</code> usando o botão <strong>uploading an existing file</strong></div>
+<div class="step"><strong>Passo 4 —</strong> No repositório: <strong>Settings</strong> → <strong>Pages</strong> → Source: <em>Deploy from a branch</em> → Branch: <code>main</code> → <code>/root</code> → Save</div>
+<div class="step"><strong>Passo 5 —</strong> Aguarde ~2 minutos. A URL será: <code>https://SEU_USUARIO.github.io/lh-conferencia</code></div>
+
+<div class="warn">
+  <strong>⚠ Câmera requer HTTPS!</strong> O GitHub Pages já fornece HTTPS automaticamente.
+  Se quiser testar localmente, use o VS Code com a extensão "Live Server" ou rode:<br>
+  <code>npx serve .</code> na pasta do projeto.
+</div>
+
+<!-- ══════════════════════════════════ -->
+<h2>4. Adicionar à tela inicial do celular</h2>
+
+<p>O site funciona como um aplicativo instalável:</p>
+<ul>
+  <li><strong>Android (Chrome):</strong> Menu (⋮) → Adicionar à tela inicial</li>
+  <li><strong>iPhone (Safari):</strong> Botão Compartilhar → Adicionar à Tela de Início</li>
+</ul>
+
+<!-- ══════════════════════════════════ -->
+<h2>5. Alterar a senha de liberação</h2>
+
+<p>A senha padrão é <code>LHADMIN1610.</code>. Para alterar:</p>
+<div class="step">1. Abra o browser e pressione <strong>F12</strong> → Console</div>
+<div class="step">2. Digite: <code>btoa('NOVA_SENHA')</code> e pressione Enter. Copie o resultado.</div>
+<div class="step">3. Em <code>js/config.js</code>, substitua o valor de <code>_ap</code> pelo resultado copiado.</div>
+
+<hr>
+<p style="color:#9ca3af; font-size:13px">LH Transportes — Sistema de Conferência de Cargas v1.0</p>
+
+</body>
+</html>
