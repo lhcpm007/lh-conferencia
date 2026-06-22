@@ -240,13 +240,18 @@ label {
 }
 .scan-info-text { font-weight: 600; }
 
-.scan-reader-wrapper {
+.scan-capture-area {
   flex: 1;
-  position: relative;
-  background: #000;
-  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-100);
+  gap: 12px;
+  padding: 32px 16px;
 }
-.scan-reader-wrapper > div { width: 100% !important; }
+.scan-capture-icon { font-size: 64px; line-height: 1; }
+.scan-capture-hint { font-size: 15px; color: var(--gray-600); text-align: center; }
 
 .scan-counter-badge {
   position: absolute;
