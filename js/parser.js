@@ -91,6 +91,15 @@ const Parser = (() => {
 
     let base = { nf: '', pedido: '', cidade: '', volAtual: null, volTotal: null, raw: text };
 
+    // 0. Templates específicos por cliente (máxima prioridade)
+    // parseWithTemplates é definida em label-templates.js (carregado antes)
+    if (typeof parseWithTemplates === 'function') {
+      const tplResult = parseWithTemplates(text);
+      if (tplResult && (tplResult.nf || tplResult.pedido)) {
+        return { ...base, ...tplResult };
+      }
+    }
+
     // 1. NFe QR code
     if (text.includes('chNFe=')) {
       const r = tryNFeQR(text);

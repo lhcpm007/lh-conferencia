@@ -112,7 +112,7 @@
   <section class="screen scan-screen" id="screen-coleta-scan">
     <div class="scan-header">
       <div class="scan-info-text" id="scan-info">—</div>
-      <div class="text-sm">Aponte para a etiqueta do volume</div>
+      <div class="text-sm">Aponte para a etiqueta ou use "Foto" para etiquetas sem barcode</div>
     </div>
     <div class="scan-reader-wrapper">
       <div id="reader-coleta"></div>
@@ -121,8 +121,12 @@
       </div>
     </div>
     <div class="scan-footer">
-      <button class="btn btn-success" id="btn-finalizar-pallet">✔ Finalizar Pallet</button>
+      <div class="scan-footer-grid">
+        <button class="btn btn-outline scan-foto-btn" id="btn-foto-coleta">🖼 Foto da Etiqueta</button>
+        <button class="btn btn-success" id="btn-finalizar-pallet">✔ Finalizar Pallet</button>
+      </div>
     </div>
+    <input type="file" id="inp-foto-coleta" accept="image/*" capture="environment" style="display:none">
   </section>
 
   <!-- ════════════════════ COLETA SUMMARY ════════════════════ -->
@@ -227,7 +231,7 @@
   <section class="screen scan-screen" id="screen-descarga-scan">
     <div class="scan-header">
       <div class="scan-info-text" id="scan-info-desc">—</div>
-      <div class="text-sm">Aponte para a etiqueta do volume</div>
+      <div class="text-sm">Aponte para a etiqueta ou use "Foto" para etiquetas sem barcode</div>
     </div>
     <div class="scan-reader-wrapper">
       <div id="reader-descarga"></div>
@@ -236,8 +240,12 @@
       </div>
     </div>
     <div class="scan-footer">
-      <button class="btn btn-success" id="btn-encerrar-descarga">✔ Encerrar Descarga</button>
+      <div class="scan-footer-grid">
+        <button class="btn btn-outline scan-foto-btn" id="btn-foto-descarga">🖼 Foto da Etiqueta</button>
+        <button class="btn btn-success" id="btn-encerrar-descarga">✔ Encerrar Descarga</button>
+      </div>
     </div>
+    <input type="file" id="inp-foto-descarga" accept="image/*" capture="environment" style="display:none">
   </section>
 
   <!-- ════════════════════ DESCARGA RESULT ════════════════════ -->
@@ -281,7 +289,7 @@
   <section class="screen scan-screen" id="screen-carga-scan">
     <div class="scan-header">
       <div class="scan-info-text" id="scan-info-carga">—</div>
-      <div class="text-sm">Aponte para a etiqueta do volume</div>
+      <div class="text-sm">Aponte para a etiqueta ou use "Foto" para etiquetas sem barcode</div>
     </div>
     <div class="scan-reader-wrapper">
       <div id="reader-carga"></div>
@@ -290,8 +298,12 @@
       </div>
     </div>
     <div class="scan-footer">
-      <button class="btn btn-success" id="btn-encerrar-carga">✔ Encerrar Carregamento</button>
+      <div class="scan-footer-grid">
+        <button class="btn btn-outline scan-foto-btn" id="btn-foto-carga">🖼 Foto da Etiqueta</button>
+        <button class="btn btn-success" id="btn-encerrar-carga">✔ Encerrar Carregamento</button>
+      </div>
     </div>
+    <input type="file" id="inp-foto-carga" accept="image/*" capture="environment" style="display:none">
   </section>
 
   <!-- ════════════════════ CARGA RESULT ════════════════════ -->
@@ -398,9 +410,54 @@
 <!-- Toast Notification -->
 <div id="toast" role="alert" aria-live="polite"></div>
 
+<!-- Camera Overlay para OCR -->
+<div id="camera-overlay" style="display:none; position:fixed; inset:0; background:#000; z-index:450;
+     flex-direction:column; align-items:center; justify-content:space-between;">
+  <div style="width:100%; padding:14px 16px; text-align:center; background:rgba(0,0,0,.6);
+              color:white; font-size:15px; font-weight:600; letter-spacing:.3px;">
+    Aponte para a etiqueta e toque em Capturar
+  </div>
+  <div style="position:relative; width:100%; flex:1; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+    <video id="camera-video" autoplay playsinline muted
+           style="width:100%; height:100%; object-fit:cover;"></video>
+    <!-- Guia de enquadramento -->
+    <div style="position:absolute; inset:0; pointer-events:none; display:flex; align-items:center; justify-content:center;">
+      <div style="width:85%; max-width:420px; aspect-ratio:2/1; border:2px solid rgba(255,255,255,.7);
+                  border-radius:8px; box-shadow:0 0 0 9999px rgba(0,0,0,.4);"></div>
+    </div>
+  </div>
+  <canvas id="camera-canvas" style="display:none;"></canvas>
+  <div style="width:100%; padding:20px 24px; display:flex; gap:14px; background:rgba(0,0,0,.75);">
+    <button id="btn-camera-cancel" class="btn btn-outline"
+            style="color:white; border-color:rgba(255,255,255,.5); flex:1;">
+      ✕ Cancelar
+    </button>
+    <button id="btn-camera-capture" class="btn btn-primary"
+            style="flex:2; font-size:17px; padding:14px;">
+      📸 Capturar
+    </button>
+  </div>
+</div>
+
+<!-- OCR Loading Overlay -->
+<div id="ocr-loading" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.78);
+     z-index:500; flex-direction:column; align-items:center; justify-content:center;
+     color:white; gap:16px; text-align:center; padding:24px">
+  <div style="font-size:56px">🔍</div>
+  <div style="font-size:20px; font-weight:700">Lendo etiqueta...</div>
+  <div style="font-size:14px; opacity:.75; max-width:260px; line-height:1.5">
+    O sistema está extraindo as informações.<br>Aguarde alguns segundos.
+  </div>
+  <div id="ocr-progress" style="font-size:13px; opacity:.7; font-variant-numeric:tabular-nums">—</div>
+  <div class="ocr-spinner"></div>
+</div>
+
 <!-- ════════════════════════════════════
      SCRIPTS (CDN)
 ════════════════════════════════════ -->
+
+<!-- Tesseract.js — OCR para etiquetas sem barcode -->
+<script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
 
 <!-- SheetJS — geração de Excel -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -417,6 +474,7 @@
 
 <!-- App modules -->
 <script src="js/config.js"></script>
+<script src="js/label-templates.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/parser.js"></script>
 <script src="js/storage.js"></script>

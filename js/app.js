@@ -193,6 +193,15 @@ function setupAllListeners() {
   // ── COLETA SCAN ──────────────────────────────────────────────────────────
   q('#btn-finalizar-pallet').addEventListener('click', finishColetaPallet);
 
+  // ── BOTÕES DE FOTO (OCR) ──────────────────────────────────────────────────
+  q('#btn-foto-coleta').addEventListener('click',   () => captureAndOCR('coleta'));
+  q('#btn-foto-descarga').addEventListener('click', () => captureAndOCR('descarga'));
+  q('#btn-foto-carga').addEventListener('click',    () => captureAndOCR('carga'));
+
+  // ── CAMERA OVERLAY ────────────────────────────────────────────────────────
+  q('#btn-camera-capture').addEventListener('click', captureFrameAndOCR);
+  q('#btn-camera-cancel').addEventListener('click',  closeCameraOverlay);
+
   // ── COLETA SUMMARY ───────────────────────────────────────────────────────
   q('#btn-novo-pallet').addEventListener('click', startNewPallet);
   q('#btn-enviar-arquivo').addEventListener('click', () => sendColetaFile(false));
@@ -1028,6 +1037,111 @@ function showSetupNotices() {
     <a href="COMO_CONFIGURAR.html" target="_blank" style="color:var(--blue)">Ver guia de configuração →</a>
   </small>`;
   homeScreen.appendChild(div);
+}
+
+// ── OCR — Leitura de etiquetas por foto ──────────────────────────────────
+
+let _ocrWorker  = null;
+let _cameraStream = null;
+let _cameraMode   = null;
+
+async function getOCRWorker() {
+  if (!_ocrWorker) {
+    _ocrWorker = await Tesseract.createWorker('por+eng', 1, {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          const pct = Math.round((m.progress || 0) * 100);
+          const progEl = q('#ocr-progress');
+          if (progEl) progEl.textContent = `${pct}%`;
+        }
+      }
+    });
+  }
+  return _ocrWorker;
+}
+
+async function runOCR(imageFile) {
+  const worker = await getOCRWorker();
+  const { data: { text } } = await worker.recognize(imageFile);
+  return text;
+}
+
+function showOCRLoading(show) {
+  const el = q('#ocr-loading');
+  if (!el) return;
+  el.style.display = show ? 'flex' : 'none';
+  const prog = q('#ocr-progress');
+  if (prog && show) prog.textContent = '0%';
+}
+
+async function captureAndOCR(mode) {
+  if (scanPaused) return;
+  _cameraMode = mode;
+
+  const overlay = q('#camera-overlay');
+  const video   = q('#camera-video');
+
+  try {
+    _cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    video.srcObject = _cameraStream;
+    overlay.style.display = 'flex';
+  } catch (e) {
+    console.error('[Camera]', e);
+    showToast('Não foi possível acessar a câmera. Verifique as permissões do navegador.', 'error', 5000);
+  }
+}
+
+function closeCameraOverlay() {
+  if (_cameraStream) {
+    _cameraStream.getTracks().forEach(t => t.stop());
+    _cameraStream = null;
+  }
+  const video = q('#camera-video');
+  if (video) video.srcObject = null;
+  q('#camera-overlay').style.display = 'none';
+}
+
+async function captureFrameAndOCR() {
+  const mode   = _cameraMode;
+  const video  = q('#camera-video');
+  const canvas = q('#camera-canvas');
+
+  canvas.width  = video.videoWidth  || 1280;
+  canvas.height = video.videoHeight || 720;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+
+  closeCameraOverlay();
+  scanPaused = true;
+  showOCRLoading(true);
+
+  canvas.toBlob(async blob => {
+    try {
+      const text = await runOCR(blob);
+      if (!text || !text.trim()) {
+        showToast('Não foi possível ler o texto da etiqueta. Tente novamente.', 'warning', 4000);
+        scanPaused = false;
+        return;
+      }
+      const parsed   = Parser.parse(text);
+      const rawLabel = text.length > 150 ? text.substring(0, 150) + '…' : text;
+      showParseModal(parsed, `[OCR] ${rawLabel}`, confirmedData => {
+        if (!confirmedData) return;
+        if (mode === 'coleta')   processColetaScan(confirmedData);
+        if (mode === 'descarga') processDescargaScan(confirmedData);
+        if (mode === 'carga')    processCargaScan(confirmedData);
+        Scanner.resetDebounce();
+      });
+    } catch (e) {
+      console.error('[OCR] Erro:', e);
+      showToast('Erro na leitura OCR. Tente novamente com melhor iluminação.', 'error', 4000);
+      scanPaused = false;
+    } finally {
+      showOCRLoading(false);
+    }
+  }, 'image/jpeg', 0.92);
 }
 
 // ── INICIAR ───────────────────────────────────────────────────────────────

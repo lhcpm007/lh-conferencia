@@ -501,6 +501,33 @@ label {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 
+/* ── Scan footer com 2 botões ─────────────────────────────── */
+.scan-footer-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: center;
+}
+.scan-foto-btn {
+  white-space: nowrap;
+  min-width: 0;
+  padding: 14px 12px;
+  font-size: 14px;
+  border-color: rgba(255,255,255,.3);
+  color: var(--gray-800);
+  background: var(--white);
+}
+.scan-foto-btn:hover { background: var(--blue-lt); border-color: var(--blue); }
+
+/* ── OCR spinner ──────────────────────────────────────────── */
+.ocr-spinner {
+  width: 40px; height: 40px;
+  border: 4px solid rgba(255,255,255,.3);
+  border-top-color: var(--white);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+
 /* ── html5-qrcode internals ───────────────────────────────── */
 #reader-coleta, #reader-descarga, #reader-carga {
   width: 100% !important;
