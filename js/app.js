@@ -1074,9 +1074,27 @@ function showOCRLoading(show) {
   if (prog && show) prog.textContent = '0%';
 }
 
+function _restartScanner(mode) {
+  const containerId = mode === 'coleta'   ? 'reader-coleta'
+                    : mode === 'descarga' ? 'reader-descarga'
+                    :                       'reader-carga';
+  Scanner.start(containerId, handleScanResult).catch(err => {
+    console.warn('[Scanner] Erro ao reiniciar após OCR:', err);
+  });
+}
+
 async function captureAndOCR(mode) {
   if (scanPaused) return;
   _cameraMode = mode;
+
+  // Verificação de suporte (requer HTTPS)
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('Câmera não disponível. Verifique se o app está sendo acessado via HTTPS.', 'error', 5000);
+    return;
+  }
+
+  // Parar o scanner QR para liberar a câmera antes de getUserMedia
+  if (Scanner.isRunning) await Scanner.stop();
 
   const overlay = q('#camera-overlay');
   const video   = q('#camera-video');
@@ -1089,8 +1107,12 @@ async function captureAndOCR(mode) {
     video.srcObject = _cameraStream;
     overlay.style.display = 'flex';
   } catch (e) {
-    console.error('[Camera]', e);
-    showToast('Não foi possível acessar a câmera. Verifique as permissões do navegador.', 'error', 5000);
+    console.error('[Camera]', e.name, e.message);
+    _restartScanner(mode);
+    const msg = e.name === 'NotAllowedError'
+      ? 'Permissão de câmera negada. No Chrome: toque no cadeado na barra de endereços → Câmera → Permitir.'
+      : `Não foi possível acessar a câmera (${e.name}). Tente fechar e reabrir o app.`;
+    showToast(msg, 'error', 7000);
   }
 }
 
@@ -1102,6 +1124,9 @@ function closeCameraOverlay() {
   const video = q('#camera-video');
   if (video) video.srcObject = null;
   q('#camera-overlay').style.display = 'none';
+
+  // Reiniciar o scanner QR após liberar a câmera
+  if (_cameraMode) _restartScanner(_cameraMode);
 }
 
 async function captureFrameAndOCR() {
