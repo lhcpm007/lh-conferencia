@@ -1072,15 +1072,18 @@ async function captureAndOCR(mode) {
     return;
   }
 
-  const overlay = q('#camera-overlay');
-  const video   = q('#camera-video');
+  const overlay    = q('#camera-overlay');
+  const video      = q('#camera-video');
+  const captureBtn = q('#btn-camera-capture');
   try {
     _cameraStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false
     });
     video.srcObject = _cameraStream;
+    captureBtn.disabled = true;
     overlay.style.display = 'flex';
+    video.addEventListener('canplay', () => { captureBtn.disabled = false; }, { once: true });
   } catch (e) {
     console.error('[Camera]', e.name, e.message);
     const msg = e.name === 'NotAllowedError'
@@ -1095,8 +1098,13 @@ async function captureFrameAndOCR() {
   const video  = q('#camera-video');
   const canvas = q('#camera-canvas');
 
-  canvas.width  = video.videoWidth  || 1280;
-  canvas.height = video.videoHeight || 720;
+  if (!video.videoWidth || !video.videoHeight) {
+    showToast('Câmera ainda inicializando. Aguarde um instante e tente novamente.', 'warning', 3000);
+    return;
+  }
+
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
   canvas.getContext('2d').drawImage(video, 0, 0);
 
   closeCameraOverlay();
