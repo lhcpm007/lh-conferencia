@@ -78,8 +78,8 @@ function qa(sel) { return document.querySelectorAll(sel); }
 function today() { return new Date().toISOString().slice(0, 10); }
 
 function navigate(screenId) {
-  // Parar scanner ao sair de tela de scan
-  if (Scanner.isRunning) Scanner.stop();
+  // Fechar câmera OCR ao navegar
+  closeCameraOverlay();
 
   qa('.screen').forEach(s => s.classList.remove('active'));
   const target = q(`#screen-${screenId}`);
@@ -343,7 +343,7 @@ function handleBackButton() {
   };
   if (id === 'coleta-scan') {
     showConfirmDialog('Voltar? A captura atual do pallet será perdida.', () => {
-      Scanner.stop();
+      closeCameraOverlay();
       State.coleta.palletAtual = null;
       navigate('coleta-pallet');
     });
@@ -351,14 +351,14 @@ function handleBackButton() {
   }
   if (id === 'descarga-scan') {
     showConfirmDialog('Cancelar a descarga? Os dados não serão salvos.', () => {
-      Scanner.stop();
+      closeCameraOverlay();
       navigate('descarga-tipo');
     });
     return;
   }
   if (id === 'carga-scan') {
     showConfirmDialog('Cancelar o carregamento? Os dados não serão salvos.', () => {
-      Scanner.stop();
+      closeCameraOverlay();
       navigate('carga-setup');
     });
     return;
@@ -393,26 +393,6 @@ async function startScan(mode) {
     updateCargaCounter();
   }
 
-  try {
-    const containerId = mode === 'coleta' ? 'reader-coleta' : mode === 'descarga' ? 'reader-descarga' : 'reader-carga';
-    await Scanner.start(containerId, handleScanResult);
-  } catch (err) {
-    showToast('Não foi possível acessar a câmera. Verifique as permissões.', 'error', 4000);
-    navigate(mode === 'coleta' ? 'coleta-pallet' : mode === 'descarga' ? `descarga-${State.descarga.tipo}-setup` : 'carga-setup');
-  }
-}
-
-function handleScanResult(text) {
-  if (scanPaused) return;
-  scanPaused = true;
-  const parsed = Parser.parse(text);
-  showParseModal(parsed, text, confirmedData => {
-    if (!confirmedData) return;
-    if (scanMode === 'coleta')    processColetaScan(confirmedData);
-    if (scanMode === 'descarga')  processDescargaScan(confirmedData);
-    if (scanMode === 'carga')     processCargaScan(confirmedData);
-    Scanner.resetDebounce();
-  });
 }
 
 // ── MODAL DE PARSE / CONFIRMAÇÃO ──────────────────────────────────────────
@@ -492,7 +472,6 @@ function finishColetaPallet() {
     showToast('Nenhum volume capturado neste pallet.', 'error');
     return;
   }
-  Scanner.stop();
   State.coleta.pallets.push({ ...pa });
   State.coleta.palletAtual = null;
   renderColetaSummary();
@@ -631,7 +610,7 @@ function updateDescargaCounter() {
 }
 
 async function endDescarga() {
-  await Scanner.stop();
+  closeCameraOverlay();
 
   if (State.descarga.tipo === 'coleta') {
     await endDescargaColeta();
@@ -814,7 +793,7 @@ function updateCargaCounter() {
 }
 
 async function endCarga() {
-  await Scanner.stop();
+  closeCameraOverlay();
 
   // Verificar volumes pendentes
   const pending = getPendingGroups(State.carga.volumes);
@@ -1075,6 +1054,12 @@ function showOCRLoading(show) {
 }
 
 function closeCameraOverlay() {
+  if (_cameraStream) {
+    _cameraStream.getTracks().forEach(t => t.stop());
+    _cameraStream = null;
+  }
+  const video = q('#camera-video');
+  if (video) video.srcObject = null;
   q('#camera-overlay').style.display = 'none';
 }
 
@@ -1082,57 +1067,27 @@ async function captureAndOCR(mode) {
   if (scanPaused) return;
   _cameraMode = mode;
 
-  // Captura diretamente do vídeo do scanner QR já ativo — sem trocar câmera
-  const containerId = mode === 'coleta'   ? 'reader-coleta'
-                    : mode === 'descarga' ? 'reader-descarga'
-                    :                       'reader-carga';
-  const video = document.querySelector(`#${containerId} video`);
-
-  if (!video || !video.videoWidth) {
-    showToast('Scanner não está ativo. Aguarde iniciar e tente novamente.', 'warning', 3000);
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('Câmera não disponível. Acesse o app via HTTPS.', 'error', 5000);
     return;
   }
 
-  // Flash visual para indicar captura
-  const flash = document.createElement('div');
-  flash.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:999;opacity:.7;pointer-events:none;transition:opacity .25s';
-  document.body.appendChild(flash);
-  setTimeout(() => { flash.style.opacity = '0'; setTimeout(() => flash.remove(), 250); }, 80);
-
-  // Captura o frame atual do scanner para o canvas
-  const canvas = q('#camera-canvas');
-  canvas.width  = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-
-  scanPaused = true;
-  showOCRLoading(true);
-
-  canvas.toBlob(async blob => {
-    try {
-      const text = await runOCR(blob);
-      if (!text || !text.trim()) {
-        showToast('Não foi possível ler o texto da etiqueta. Tente novamente.', 'warning', 4000);
-        scanPaused = false;
-        return;
-      }
-      const parsed   = Parser.parse(text);
-      const rawLabel = text.length > 150 ? text.substring(0, 150) + '…' : text;
-      showParseModal(parsed, `[OCR] ${rawLabel}`, confirmedData => {
-        if (!confirmedData) return;
-        if (mode === 'coleta')   processColetaScan(confirmedData);
-        if (mode === 'descarga') processDescargaScan(confirmedData);
-        if (mode === 'carga')    processCargaScan(confirmedData);
-        Scanner.resetDebounce();
-      });
-    } catch (e) {
-      console.error('[OCR] Erro:', e);
-      showToast('Erro na leitura OCR. Tente novamente com melhor iluminação.', 'error', 4000);
-      scanPaused = false;
-    } finally {
-      showOCRLoading(false);
-    }
-  }, 'image/jpeg', 0.95);
+  const overlay = q('#camera-overlay');
+  const video   = q('#camera-video');
+  try {
+    _cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    video.srcObject = _cameraStream;
+    overlay.style.display = 'flex';
+  } catch (e) {
+    console.error('[Camera]', e.name, e.message);
+    const msg = e.name === 'NotAllowedError'
+      ? 'Permissão negada. Toque no cadeado na barra de endereços → Câmera → Permitir.'
+      : `Erro ao abrir câmera (${e.name}). Feche e reabra o app.`;
+    showToast(msg, 'error', 7000);
+  }
 }
 
 async function captureFrameAndOCR() {
@@ -1163,7 +1118,6 @@ async function captureFrameAndOCR() {
         if (mode === 'coleta')   processColetaScan(confirmedData);
         if (mode === 'descarga') processDescargaScan(confirmedData);
         if (mode === 'carga')    processCargaScan(confirmedData);
-        Scanner.resetDebounce();
       });
     } catch (e) {
       console.error('[OCR] Erro:', e);
@@ -1172,7 +1126,7 @@ async function captureFrameAndOCR() {
     } finally {
       showOCRLoading(false);
     }
-  }, 'image/jpeg', 0.92);
+  }, 'image/jpeg', 0.95);
 }
 
 // ── INICIAR ───────────────────────────────────────────────────────────────
