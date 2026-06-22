@@ -112,21 +112,21 @@
   <section class="screen scan-screen" id="screen-coleta-scan">
     <div class="scan-header">
       <div class="scan-info-text" id="scan-info">—</div>
-      <div class="text-sm">Aponte para a etiqueta ou use "Foto" para etiquetas sem barcode</div>
+      <div class="text-sm">Fotografe a etiqueta para registrar o volume</div>
     </div>
-    <div class="scan-reader-wrapper">
-      <div id="reader-coleta"></div>
-      <div class="scan-counter-badge">
+    <div class="scan-capture-area">
+      <div class="scan-capture-icon">📦</div>
+      <div class="scan-capture-hint">Toque em <strong>Capturar</strong> e aponte para a etiqueta</div>
+      <div class="scan-counter-badge" style="position:static;margin-top:12px">
         Volumes: <span id="scan-count-coleta">0</span>
       </div>
     </div>
     <div class="scan-footer">
       <div class="scan-footer-grid">
-        <button class="btn btn-outline scan-foto-btn" id="btn-foto-coleta">🖼 Foto da Etiqueta</button>
+        <button class="btn btn-primary scan-foto-btn" id="btn-foto-coleta">📸 Capturar</button>
         <button class="btn btn-success" id="btn-finalizar-pallet">✔ Finalizar Pallet</button>
       </div>
     </div>
-    <input type="file" id="inp-foto-coleta" accept="image/*" capture="environment" style="display:none">
   </section>
 
   <!-- ════════════════════ COLETA SUMMARY ════════════════════ -->
@@ -231,21 +231,21 @@
   <section class="screen scan-screen" id="screen-descarga-scan">
     <div class="scan-header">
       <div class="scan-info-text" id="scan-info-desc">—</div>
-      <div class="text-sm">Aponte para a etiqueta ou use "Foto" para etiquetas sem barcode</div>
+      <div class="text-sm">Fotografe a etiqueta para registrar o volume</div>
     </div>
-    <div class="scan-reader-wrapper">
-      <div id="reader-descarga"></div>
-      <div class="scan-counter-badge">
+    <div class="scan-capture-area">
+      <div class="scan-capture-icon">📦</div>
+      <div class="scan-capture-hint">Toque em <strong>Capturar</strong> e aponte para a etiqueta</div>
+      <div class="scan-counter-badge" style="position:static;margin-top:12px">
         Volumes: <span id="scan-count-descarga">0</span>
       </div>
     </div>
     <div class="scan-footer">
       <div class="scan-footer-grid">
-        <button class="btn btn-outline scan-foto-btn" id="btn-foto-descarga">🖼 Foto da Etiqueta</button>
+        <button class="btn btn-primary scan-foto-btn" id="btn-foto-descarga">📸 Capturar</button>
         <button class="btn btn-success" id="btn-encerrar-descarga">✔ Encerrar Descarga</button>
       </div>
     </div>
-    <input type="file" id="inp-foto-descarga" accept="image/*" capture="environment" style="display:none">
   </section>
 
   <!-- ════════════════════ DESCARGA RESULT ════════════════════ -->
@@ -289,21 +289,21 @@
   <section class="screen scan-screen" id="screen-carga-scan">
     <div class="scan-header">
       <div class="scan-info-text" id="scan-info-carga">—</div>
-      <div class="text-sm">Aponte para a etiqueta ou use "Foto" para etiquetas sem barcode</div>
+      <div class="text-sm">Fotografe a etiqueta para registrar o volume</div>
     </div>
-    <div class="scan-reader-wrapper">
-      <div id="reader-carga"></div>
-      <div class="scan-counter-badge">
+    <div class="scan-capture-area">
+      <div class="scan-capture-icon">📦</div>
+      <div class="scan-capture-hint">Toque em <strong>Capturar</strong> e aponte para a etiqueta</div>
+      <div class="scan-counter-badge" style="position:static;margin-top:12px">
         Volumes: <span id="scan-count-carga">0</span>
       </div>
     </div>
     <div class="scan-footer">
       <div class="scan-footer-grid">
-        <button class="btn btn-outline scan-foto-btn" id="btn-foto-carga">🖼 Foto da Etiqueta</button>
+        <button class="btn btn-primary scan-foto-btn" id="btn-foto-carga">📸 Capturar</button>
         <button class="btn btn-success" id="btn-encerrar-carga">✔ Encerrar Carregamento</button>
       </div>
     </div>
-    <input type="file" id="inp-foto-carga" accept="image/*" capture="environment" style="display:none">
   </section>
 
   <!-- ════════════════════ CARGA RESULT ════════════════════ -->
@@ -461,9 +461,6 @@
 
 <!-- SheetJS — geração de Excel -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-<!-- html5-qrcode — leitura de câmera -->
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <!-- EmailJS -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
