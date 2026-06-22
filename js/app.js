@@ -1074,59 +1074,65 @@ function showOCRLoading(show) {
   if (prog && show) prog.textContent = '0%';
 }
 
-function _restartScanner(mode) {
-  const containerId = mode === 'coleta'   ? 'reader-coleta'
-                    : mode === 'descarga' ? 'reader-descarga'
-                    :                       'reader-carga';
-  Scanner.start(containerId, handleScanResult).catch(err => {
-    console.warn('[Scanner] Erro ao reiniciar após OCR:', err);
-  });
+function closeCameraOverlay() {
+  q('#camera-overlay').style.display = 'none';
 }
 
 async function captureAndOCR(mode) {
   if (scanPaused) return;
   _cameraMode = mode;
 
-  // Verificação de suporte (requer HTTPS)
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showToast('Câmera não disponível. Verifique se o app está sendo acessado via HTTPS.', 'error', 5000);
+  // Captura diretamente do vídeo do scanner QR já ativo — sem trocar câmera
+  const containerId = mode === 'coleta'   ? 'reader-coleta'
+                    : mode === 'descarga' ? 'reader-descarga'
+                    :                       'reader-carga';
+  const video = document.querySelector(`#${containerId} video`);
+
+  if (!video || !video.videoWidth) {
+    showToast('Scanner não está ativo. Aguarde iniciar e tente novamente.', 'warning', 3000);
     return;
   }
 
-  // Parar o scanner QR para liberar a câmera antes de getUserMedia
-  if (Scanner.isRunning) await Scanner.stop();
+  // Flash visual para indicar captura
+  const flash = document.createElement('div');
+  flash.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:999;opacity:.7;pointer-events:none;transition:opacity .25s';
+  document.body.appendChild(flash);
+  setTimeout(() => { flash.style.opacity = '0'; setTimeout(() => flash.remove(), 250); }, 80);
 
-  const overlay = q('#camera-overlay');
-  const video   = q('#camera-video');
+  // Captura o frame atual do scanner para o canvas
+  const canvas = q('#camera-canvas');
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
 
-  try {
-    _cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false
-    });
-    video.srcObject = _cameraStream;
-    overlay.style.display = 'flex';
-  } catch (e) {
-    console.error('[Camera]', e.name, e.message);
-    _restartScanner(mode);
-    const msg = e.name === 'NotAllowedError'
-      ? 'Permissão de câmera negada. No Chrome: toque no cadeado na barra de endereços → Câmera → Permitir.'
-      : `Não foi possível acessar a câmera (${e.name}). Tente fechar e reabrir o app.`;
-    showToast(msg, 'error', 7000);
-  }
-}
+  scanPaused = true;
+  showOCRLoading(true);
 
-function closeCameraOverlay() {
-  if (_cameraStream) {
-    _cameraStream.getTracks().forEach(t => t.stop());
-    _cameraStream = null;
-  }
-  const video = q('#camera-video');
-  if (video) video.srcObject = null;
-  q('#camera-overlay').style.display = 'none';
-
-  // Reiniciar o scanner QR após liberar a câmera
-  if (_cameraMode) _restartScanner(_cameraMode);
+  canvas.toBlob(async blob => {
+    try {
+      const text = await runOCR(blob);
+      if (!text || !text.trim()) {
+        showToast('Não foi possível ler o texto da etiqueta. Tente novamente.', 'warning', 4000);
+        scanPaused = false;
+        return;
+      }
+      const parsed   = Parser.parse(text);
+      const rawLabel = text.length > 150 ? text.substring(0, 150) + '…' : text;
+      showParseModal(parsed, `[OCR] ${rawLabel}`, confirmedData => {
+        if (!confirmedData) return;
+        if (mode === 'coleta')   processColetaScan(confirmedData);
+        if (mode === 'descarga') processDescargaScan(confirmedData);
+        if (mode === 'carga')    processCargaScan(confirmedData);
+        Scanner.resetDebounce();
+      });
+    } catch (e) {
+      console.error('[OCR] Erro:', e);
+      showToast('Erro na leitura OCR. Tente novamente com melhor iluminação.', 'error', 4000);
+      scanPaused = false;
+    } finally {
+      showOCRLoading(false);
+    }
+  }, 'image/jpeg', 0.95);
 }
 
 async function captureFrameAndOCR() {
