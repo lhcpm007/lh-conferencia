@@ -341,17 +341,18 @@ const LABEL_TEMPLATES = [
     extrair: text => {
       const up = text.toUpperCase();
 
-      // Nota Fiscal: 073996 (número na linha seguinte ao label)
-      const nfMatch = up.match(/NOTA\s+FISCAL[\s\r\n]+(\d+)/);
+      // Nota Fiscal: 073996 — aceita número na mesma linha (com :) ou na seguinte
+      const nfMatch = up.match(/NOTA\s+FISCAL[\s\r\n]*:?[\s\r\n]*(\d+)/);
       const nf = nfMatch ? String(parseInt(nfMatch[1], 10)) : '';
 
-      // Volumes: 6/8 (número na linha seguinte ao label)
-      const volMatch = up.match(/\bVOLUMES[\s\r\n]+(\d+)\s*\/\s*(\d+)/);
+      // Volumes: 6/8 — aceita "Volumes: 6/8" (mesma linha c/ :) ou em linhas separadas
+      const volMatch = up.match(/\bVOLUMES?\s*[:\s\r\n]+(\d+)\s*\/\s*(\d+)/);
       const volAtual = volMatch ? parseInt(volMatch[1], 10) : null;
       const volTotal = volMatch ? parseInt(volMatch[2], 10) : null;
 
-      // Cidade: "ALCINOPOLIS-MS" no endereço — captura antes de "-MS"
-      const cidadeMatch = up.match(/([A-Z][A-Z\s]{2,29?})\s*-\s*MS\b/);
+      // Cidade: "ALCINOPOLIS-MS" ou "ALCINOPOLIS MS" (com ou sem hífen)
+      const cidadeMatch = up.match(/([A-Z][A-Z\s]{1,29?})\s*[-–]\s*MS\b/) ||
+                         up.match(/^([A-Z][A-Z\s]{1,29?})\s+MS\s*$/m);
       const cidade = cidadeMatch ? cidadeMatch[1].trim() : '';
 
       return { nf, pedido: '', cidade, volAtual, volTotal };

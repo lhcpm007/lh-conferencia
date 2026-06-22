@@ -411,8 +411,15 @@ function showParseModal(parsed, rawText, callback) {
   validateParseForm();
   showModal('modal-parse');
   // Focar no primeiro campo vazio obrigatório
-  const firstEmpty = ['#inp-parse-nf','#inp-parse-pedido','#inp-parse-cidade','#inp-parse-volAtual','#inp-parse-volTotal']
-    .map(s => q(s)).find(el => !el.value.trim());
+  // Se NF ou Pedido já foi lido, não força foco no outro — ambos são opcionais entre si
+  const nfOrPedFilled = !!(q('#inp-parse-nf').value.trim() || q('#inp-parse-pedido').value.trim());
+  const focusOrder = [
+    ...(nfOrPedFilled ? [] : ['#inp-parse-nf']),
+    '#inp-parse-cidade',
+    '#inp-parse-volAtual',
+    '#inp-parse-volTotal'
+  ];
+  const firstEmpty = focusOrder.map(s => q(s)).find(el => !el.value.trim());
   if (firstEmpty) setTimeout(() => firstEmpty.focus(), 300);
 }
 
@@ -1113,7 +1120,17 @@ async function captureFrameAndOCR() {
 
   canvas.toBlob(async blob => {
     try {
-      const text = await runOCR(blob);
+      let text = await runOCR(blob);
+
+      // Etiqueta horizontal? Se leu muito pouco texto, tenta girado 90°
+      if (!text || text.trim().length < 30) {
+        const rotatedBlob = await _rotateCanvas90(canvas);
+        const text2 = await runOCR(rotatedBlob);
+        if (text2 && text2.trim().length > (text || '').trim().length + 10) {
+          text = text2;
+        }
+      }
+
       if (!text || !text.trim()) {
         showToast('Não foi possível ler o texto da etiqueta. Tente novamente.', 'warning', 4000);
         scanPaused = false;
@@ -1135,6 +1152,19 @@ async function captureFrameAndOCR() {
       showOCRLoading(false);
     }
   }, 'image/jpeg', 0.95);
+}
+
+function _rotateCanvas90(canvas) {
+  return new Promise(resolve => {
+    const rot = document.createElement('canvas');
+    rot.width  = canvas.height;
+    rot.height = canvas.width;
+    const ctx = rot.getContext('2d');
+    ctx.translate(rot.width / 2, rot.height / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
+    rot.toBlob(resolve, 'image/jpeg', 0.92);
+  });
 }
 
 // ── INICIAR ───────────────────────────────────────────────────────────────
